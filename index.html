@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<title>Horserace Game</title>
+<link rel="stylesheet" href="./game.css">
+</head>
+
+<body>
+    <div id="pop-up-box">
+        <div id="pop-up-box-content"></div>
+    </div>
+
+    <div class="structure">
+        <div class="info-side">
+            <h1>Select an ace card by clicking it and then press "PLAY"</h1>
+            <p onclick="popUp(msgArr[4], `block`)">About</p>
+            <p onclick="popUp(msgArr[5], `block`)">How To Play</p>
+            <p onclick="displaySpeed()">Change Speed</p>
+            <p id="rounds-won" style="background-color: #c20000; color: #ffffff; cursor: default;">Rounds Won: 0</p>
+        </div>
+
+
+        <div id="board">
+            <div class="dotted-line" style="grid-row: 1 / 2;"></div>
+            <div class="dotted-line" style="grid-row: 5 / 6;"></div>
+
+            <img class="row card">
+            <img class="row card">
+            <img class="row card">
+            <img class="row card">
+
+            <img class="ace card" src="./cards/ace-of-spades.svg" id="spades">
+            <img class="ace card" src="./cards/ace-of-hearts.svg" id="hearts">
+            <img class="ace card" src="./cards/ace-of-clubs.svg" id="clubs">
+            <img class="ace card" src="./cards/ace-of-diamonds.svg" id="diamonds">
+
+            <div id="play-button" onclick="start()">PLAY</div>
+        </div>    
+    </div>
+
+
+
+    <script>
+        // DELAY FUNCTION
+        const delay = millis => new Promise((resolve, reject) => {
+            setTimeout(_ => resolve(), millis)
+        });
+
+
+        // CREATE THE TWO PILES OF CARDS ON THE RIGHT
+        document.getElementById("board").innerHTML += `<img id="second-pile" class="card" style="grid-column: 8 / 9; grid-row: 3 / 4;" src="./cards/red.png">`;
+        for (let i=1; i<=5; i++) {
+            let rotateNum = (Math.round(Math.random())*2-1) * (Math.random()*15+10);
+            let cardHTML = `<img class="stacked card" style="transform: rotate(${rotateNum}deg);" src="./cards/red.png">`;
+            document.getElementById("board").innerHTML += cardHTML;
+        }
+        document.getElementById("board").innerHTML += `<img class="stacked card" src="./cards/red.png">`;
+        document.getElementById("board").innerHTML += `<img id="top-of-stack" class="stacked card" src="./cards/red.png">`;
+
+
+
+        // VARS
+        const root = document.querySelector(':root');
+        let cards = document.getElementsByClassName("card");
+        let button = document.getElementById("play-button");
+        const speedButtons = document.getElementsByClassName("speed-button");
+
+        let userCard = null;
+        let duration = 1;
+        let nextRow = 5;
+        let roundsWon = 0;
+
+        let rowCards = document.getElementsByClassName("row");
+        for (let i=0; i<rowCards.length; i++) {
+            rowCards[i].style.gridRow = `${i+2} / ${i+3}`;
+        }
+
+        let aceArr = [
+            document.getElementsByClassName("ace")[0],
+            document.getElementsByClassName("ace")[1],
+            document.getElementsByClassName("ace")[2],
+            document.getElementsByClassName("ace")[3]
+        ];
+
+        var suitArr = [
+            `spades`,
+            `hearts`,
+            `clubs`,
+            `diamonds`
+        ];
+
+        let cardArr = [];
+
+        // ARRAY THAT HOLDS ALL POSSIBLE POP UP MESSAGES.
+        let msgArr = [
+            `<h1>Choose an ace by clicking it and then press "PLAY"</h1>`,
+            `<h1>You Won!</h1>`,
+            `<h1>You Lost!</h1>`,
+            `<h1>Change Game Speed</h1><div class="speed-div"><button class="speed-button" onclick="changeSpeed(1, this);">Slow</button><button class="speed-button" onclick="changeSpeed(0.5, this);">Medium</button><button class="speed-button" onclick="changeSpeed(0.1, this);">Faster</button></div>`,
+            `<h1>This game is commonly called Horserace. Bets can be as simple as "five on diamonds" and can get a complex as actual horse racing bets. Visit the <a target="_blank" href='https://en.wikipedia.org/wiki/Horserace_(drinking_game)'>Wikipedia page</a> for more info.</h1>`,
+            `<h1>1) Choose an ace card.</h1> <h1>2) Each time a card from the stack on the right flips, the suit shown will push the ace of the same suit up one row.</h1> <h1>3) Once all aces either pass or are on a certain row, the card on the left will be flipped and the suit shown will push the ace of the same suit down one row.</h1> <h1>4) First ace to cross the finish line wins!</h1>`
+        ];
+
+
+
+
+
+        function resetBoard() {
+            // RESET USER CARD.
+            userCard = null;
+
+            // RESET ACE CARDS.
+            aceArr.forEach((card) => {
+                card.style.gridRow = `6 / 7`;
+                card.style.cursor = `pointer`;
+                // "${card}"
+                card.setAttribute("onClick", `chosenCard(this);`);
+                if(card.classList.contains("golden-border")){  card.classList.toggle("golden-border");  }
+            });
+
+            // RESET ARRRAY THAT HOLDS ALL CARDS.
+            cardArr = [];
+            suitArr.forEach((suit) => {
+                for(let n=2; n<=13; n++){  cardArr.push(`./cards/${n}-${suit}.svg`);  }
+            });
+
+            // RESET ROW CARDS.
+            nextRow = 5;
+            for(let i=0; i<rowCards.length; i++){  rowCards[i].src="./cards/red.png";  }
+
+            document.getElementById("second-pile").src = "./cards/red.png";
+
+            // RESET BUTTON.
+            button.style.cursor = "pointer";
+            button.style.setProperty("--button-bg", "#c20000");
+            button.style.setProperty("--button-hover-bg", "#960202");
+            button.style.setProperty("--button-color", "#ffffff");
+            button.style.setProperty("--button-hover-color", "#d6d6d6");
+            button.onclick = start;
+
+            // MAKE ALL IMAGES NOT DRAGGABLE.
+            const allImages = document.getElementsByTagName("img");
+            for(let i=0; i<allImages.length; i++){  allImages[i].setAttribute("draggable", "false");  }
+        }
+        resetBoard();
+
+
+
+
+        function chosenCard(c) {
+            // RESET ANY CARD THAT ALREADY HAS GOLDEN BORDER (RESET PREVIOUSLY CLICKED CARD).
+            aceArr.forEach((card) => {
+                if(card.classList.contains("golden-border")){  card.classList.toggle("golden-border");  }
+            });
+
+            userCard = c;
+            c.classList.toggle("golden-border");
+        }
+
+
+
+
+        function start() {
+            if (userCard==null) {
+                popUp(msgArr[0], `block`);
+            }
+            else {
+                setUp();
+                playRound();
+            }
+        }
+
+
+
+
+        // TURN OFF onClick EVENTS OF ACES.
+        function setUp() {
+            aceArr.forEach((card) => {
+                card.style.cursor = "not-allowed";
+                card.setAttribute("onClick", ``);
+            });
+            button.style.cursor = "not-allowed";
+            button.style.setProperty("--button-bg", "#4d4d4d");
+            button.style.setProperty("--button-hover-bg", "#4d4d4d");
+            button.style.setProperty("--button-color", "#b0b0b0");
+            button.style.setProperty("--button-hover-color", "#b0b0b0");
+            button.onclick = "";
+        }
+
+
+
+
+        function playRound() {
+            if (checkIfEnd()) {
+                displayWinner();
+                resetBoard();
+            }
+            else {
+                pickCard();
+            }
+            
+        }
+
+
+
+
+        async function pickCard() {
+            let randomCard = getRandomCard();
+            let suit = getSuit(randomCard);
+            
+            // ANIMATE THE STACK CARD, AND THEN THE ACE.
+            animateStack(randomCard);
+            await delay(duration*1500);
+            moveAce(suit, 1);
+            await delay(duration*2000);
+
+            // CHECK IF REACHED ROW.
+            if (reachedRow()) {
+                flipRow();
+                nextRow--;
+                await delay(duration*2500);
+            }
+            
+            // PLAY NEXT ROUND.
+            playRound();
+        }
+
+
+
+
+        // PICK IMG PATH OF A RANDOM CARD, AND REMOVE IT FROM THE CARD LIST.
+        function getRandomCard() {
+            const index = Math.floor( Math.random()*cardArr.length );
+            const randomCard = cardArr[index];
+            cardArr.splice(index, 1);
+            return randomCard;
+        }
+
+        // GET SUIT OF CARD FROM CARD IMG PATH.
+        function getSuit(card) {
+            for (let i=0; i<suitArr.length; i++) {
+                if(card.indexOf(suitArr[i])>-1){  return suitArr[i];  }
+            }
+        }
+
+
+
+
+        // ANIMATE STACK OF CARDS ON TEH RIGHT.
+        async function animateStack(card) {
+            document.getElementById("top-of-stack").classList.toggle("move-stack-card");
+            await delay(duration*500);
+            document.getElementById("top-of-stack").src = card;
+            await delay(duration*500);
+            document.getElementById("top-of-stack").classList.toggle("move-stack-card");
+            document.getElementById("second-pile").src = card;
+            document.getElementById("top-of-stack").src = `./cards/red.png`;
+        }
+
+
+
+
+        // MOVE AN ACE CARD.
+        // P1: Ace card element.
+        // P2: Direction of movement (up or down).
+        async function moveAce(ace, dir) {
+            if (dir==1) {
+                root.style.setProperty("--move-border", "#1ad31a");
+                root.style.setProperty("--end-pos", "-113.33%");
+            }
+            else {
+                root.style.setProperty("--move-border", "#d31a29");
+                root.style.setProperty("--end-pos", "113.33%");
+            }
+
+            let card = document.getElementById(`${ace}`);
+            card.classList.toggle("move-card");
+            await delay(duration*1000);
+            card.classList.toggle("move-card");
+
+            let row = card.style.gridRow.split(" / ");
+            card.style.gridRow = `${(parseInt(row[0])-dir)} / ${(parseInt(row[1])-dir)}`;
+        }
+
+
+
+
+        // CHECK IF ALL ACES HAVE REACHED A NEW ROW.
+        function reachedRow() {
+        // CHECK IF ALL ACES ARE ON OR ABOVE nextRow.
+            for (let i=0; i<aceArr.length; i++) {
+                if (parseInt(aceArr[i].style.gridRow.split(" / ")[0]) > nextRow){  return false;  }
+            }
+            return true;
+        }
+
+
+
+
+        // FLIP THE CARD ON THE LEFT.
+        async function flipRow() {
+            for (let i=0; i<rowCards.length; i++) {
+                if(parseInt(rowCards[i].style.gridRow.split(" / ")[0]) == nextRow){  card=rowCards[i];  };
+            }
+
+            card.classList.toggle("flip-card");
+            await delay(duration*250);
+            card.src = getRandomCard();
+            await delay(duration*250);
+            card.classList.toggle("flip-card");
+            
+            let suit = getSuit(card.src);
+            await delay(duration*500);
+            moveAce(suit, -1);
+        }
+
+
+
+
+        function checkIfEnd() {
+            for (let i=0; i<aceArr.length; i++) {
+                if(aceArr[i].style.gridRow==`1 / 2`){  return true;  }
+            }
+            return false;
+        }
+
+        function displayWinner() {
+            if (userCard.style.gridRow==`1 / 2`) {
+                roundsWon++;
+                document.getElementById("rounds-won").innerHTML = `Rounds Won: ${roundsWon}`;
+                popUp(msgArr[1], `block`);
+            }
+            else {
+                popUp(msgArr[2], `block`);
+            }
+        }
+
+
+
+
+        // DISPLAYS POP UP WITH MESSAGE.
+        const popUpBox = document.getElementById("pop-up-box");
+        function popUp(content, val) {
+            popUpBox.style.display = val;
+            document.getElementById(`pop-up-box-content`).innerHTML = `${content}<div class="close-button" onclick="popUp('', 'none');">Close</div>`;
+        }
+        window.addEventListener("click", (ev) => {
+            if(ev.target==popUpBox){  popUp(``, `none`);  }
+        });
+
+
+
+
+        // CHANGE THE SPEED OF THE GAME.
+        function displaySpeed() {
+            popUp(msgArr[3], "block");
+            if(duration==1){  speedButtons[0].style.backgroundColor = "#214d21";  }
+            else if(duration==0.5){  speedButtons[1].style.backgroundColor = "#214d21";  }
+            else if(duration==0.1){  speedButtons[2].style.backgroundColor = "#214d21";  }
+        }
+        function changeSpeed(dur, ele) {
+            for(let i=0; i<speedButtons.length; i++){  speedButtons[i].style.backgroundColor = "#6e6e6e";  }
+            ele.style.backgroundColor = "#214d21";
+
+            duration = dur;
+            root.style.setProperty("--duration", `${dur}s`);
+        }
+
+
+
+
+        // CORRECTLY DISPLAYS THE SLOT MACHINE AFTER USER RESIZES THE SCREEN.
+        function changeCardSize() {
+            let smallerSize = (window.innerWidth < window.innerHeight) ? "width" : "height";
+            for (let i=0; i<cards.length; i++) {
+                cards[i].style.width = "";
+                cards[i].style.height = "";
+                cards[i].style[smallerSize] = "100%";
+            }
+        }
+        changeCardSize();
+        window.addEventListener("resize", changeCardSize);
+    </script>
+</body>
+</html>
