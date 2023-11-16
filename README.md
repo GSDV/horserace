@@ -1,7 +1,7 @@
 # Horserace
 Horserace is a fun game that supports a variety of bets. Instead of playing with real cards, this project can simulate the game for you at different speeds.
 
-## How to Run
+## Setup
 Simply run
  ```bash
  git clone https://github.com/GSDV/horserace.git
